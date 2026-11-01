@@ -72,6 +72,35 @@ class TestParser(unittest.TestCase):
                 self.assertEqual(expression.sql(), sql)
                 self.assertIsNone(expression.find(exp.DataType))
 
+    def test_describe_dot(self):
+        for sql in ("DESC.", "DESCRIBE.", "DESC. ;", "DESC ."):
+            with self.subTest(sql=sql), self.assertRaises(ParseError):
+                parse_one(sql, read="spark")
+
+        self.assertEqual(
+            parse_one("DESCRIBE.foo", read="spark"),
+            exp.Describe(this=exp.Table(this=exp.to_identifier("foo"))),
+        )
+        self.assertEqual(
+            parse_one("DESCRIBE EXTENDED.b", read="spark"),
+            exp.Describe(
+                this=exp.Table(
+                    this=exp.to_identifier("b"),
+                    db=exp.to_identifier("EXTENDED"),
+                )
+            ),
+        )
+        self.assertEqual(
+            parse_one("DESCRIBE TABLE.b", read="spark"),
+            exp.Describe(
+                this=exp.Table(
+                    this=exp.to_identifier("b"),
+                    db=exp.to_identifier("TABLE"),
+                ),
+                kind="TABLE",
+            ),
+        )
+
     def test_parse_empty(self):
         with self.assertRaises(ParseError):
             parse_one("")
